@@ -2,7 +2,7 @@ import UIKit
 
 
 
-final class MovieQuizViewController: UIViewController {
+final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate  {
     
     // MARK: - IBOutlet
     
@@ -21,8 +21,10 @@ final class MovieQuizViewController: UIViewController {
     private var correctAnswers = 0 // переменная со счётчиком правильных ответов
     
     private let questionsAmount: Int = 10
-    private let questionFactory: QuestionFactoryProtocol = QuestionFactory()
+    private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
+    
+    private var alertPresenter = AlertPresenter()
     
     
     // MARK: - IBAction
@@ -111,58 +113,52 @@ final class MovieQuizViewController: UIViewController {
             currentQuestionIndex += 1
             // идём в состояние "Вопрос показан"
             
-            if let nextQuestion = questionFactory.requestNextQuestion() {
-                currentQuestion = nextQuestion
-                let viewModel = convert(model: nextQuestion)
-
-                show(quiz: viewModel)
-            }
+            questionFactory?.requestNextQuestion() 
         }
     }
     
     // приватный метод для показа результатов раунда квиза
     // принимает вью модель QuizResultsViewModel и ничего не возвращает
     private func show(quiz result: QuizResultsViewModel) {
-        let alert = UIAlertController(
+        let model = AlertModel(
             title: result.title,
-            message: result.text,
-            preferredStyle: .alert)
-
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in // слабая ссылка на self
-            guard let self = self else { return } // разворачиваем слабую ссылку
-
+            message: result.text,   // текст с количеством правильных ответов
+            buttonText: result.buttonText
+        ) { [weak self] in
+            guard let self = self else { return }
+            // Сброс состояния и перезапуск игры
             self.currentQuestionIndex = 0
             self.correctAnswers = 0
-
-            if let firstQuestion = self.questionFactory.requestNextQuestion() {
-                self.currentQuestion = firstQuestion
-                let viewModel = self.convert(model: firstQuestion)
-
-                self.show(quiz: viewModel)
-            }
+            self.questionFactory?.requestNextQuestion()
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in // слабая ссылка на self
-            guard let self = self else { return } // разворачиваем слабую ссылку
-            self.showNextQuestionOrResults()
-        }
-
-        alert.addAction(action)
-
-        self.present(alert, animated: true, completion: nil)
+        alertPresenter.show(in: self, model: model)
     }
     
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
-        // массив вопросов
-        if let firstQuestion = questionFactory.requestNextQuestion() {
-            currentQuestion = firstQuestion
-            let viewModel = convert(model: firstQuestion)
-            show(quiz: viewModel)
-        }
         super.viewDidLoad()
+
+        let questionFactory = QuestionFactory()
+        questionFactory.setup(delegate: self)
+        self.questionFactory = questionFactory
+        
+        self.questionFactory?.requestNextQuestion()
+    }
+    
+    // MARK: - QuestionFactoryDelegate
+
+    func didReceiveNextQuestion(question: QuizQuestion?) {
+        guard let question = question else {
+            return
+        }
+
+        currentQuestion = question
+        let viewModel = convert(model: question)
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.show(quiz: viewModel)
+        }
     }
 }
-
-
