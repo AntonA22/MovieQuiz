@@ -25,6 +25,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate  
     private var currentQuestion: QuizQuestion?
     
     private var alertPresenter = AlertPresenter()
+    private var statisticService: StatisticServiceProtocol?
     
     
     // MARK: - IBAction
@@ -120,9 +121,19 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate  
     // приватный метод для показа результатов раунда квиза
     // принимает вью модель QuizResultsViewModel и ничего не возвращает
     private func show(quiz result: QuizResultsViewModel) {
+        statisticService?.store(correct: correctAnswers, total: questionsAmount)
+        let bestGame = statisticService?.bestGame
+        guard let statisticService = statisticService else { return }
+
+        let message = """
+        Ваш результат: \(correctAnswers)/\(questionsAmount)
+        Количество сыгранных квизов: \(statisticService.gamesCount)
+        Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(statisticService.bestGame.date.dateTimeString))
+        Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy*100))%
+        """
         let model = AlertModel(
             title: result.title,
-            message: result.text,   // текст с количеством правильных ответов
+            message: message,   // текст с количеством правильных ответов
             buttonText: result.buttonText
         ) { [weak self] in
             guard let self = self else { return }
@@ -145,6 +156,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate  
         self.questionFactory = questionFactory
         
         self.questionFactory?.requestNextQuestion()
+        
+        self.statisticService = StatisticService()
     }
     
     // MARK: - QuestionFactoryDelegate
