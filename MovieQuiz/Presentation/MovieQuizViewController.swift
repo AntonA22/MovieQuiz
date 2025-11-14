@@ -2,7 +2,7 @@ import UIKit
 
 
 
-final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate  {
+final class MovieQuizViewController: UIViewController  {
     
     // MARK: - IBOutlet
     
@@ -34,7 +34,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate  
         yesButton.isEnabled = false
         noButton.isEnabled = false
         
-        guard let currentQuestion = currentQuestion else {
+        guard let currentQuestion else {
             return
         }
         let givenAnswer = false
@@ -47,9 +47,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate  
         guard let currentQuestion = currentQuestion else {
             return
         }
-        let givenAnswer = true // 2
+        let givenAnswer = true
         
-        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer) // 3
+        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer) 
     }
     
     // MARK: - Private Methods
@@ -71,8 +71,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate  
         counterLabel.text = step.questionNumber
         
         // рамки
-        imageView.layer.masksToBounds = true // 1
-        imageView.layer.borderWidth = 0 // 2
+        imageView.layer.masksToBounds = true
+        imageView.layer.borderWidth = 0
         imageView.layer.cornerRadius = 20
         
         //включаем кнопки
@@ -84,11 +84,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate  
     // принимает на вход булевое значение и ничего не возвращает
     private func showAnswerResult(isCorrect: Bool) {
         if isCorrect { // 1
-                correctAnswers += 1 // 2
+                correctAnswers += 1
         }
         
-        imageView.layer.borderWidth = 8 // 2
-        imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor // 3
+        imageView.layer.borderWidth = 8
+        imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             self.showNextQuestionOrResults()
@@ -101,7 +101,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate  
         if currentQuestionIndex == questionsAmount - 1 {
             let text = correctAnswers == questionsAmount ?
                     "Поздравляем, вы ответили на 10 из 10!" :
-                    "Вы ответили на \(correctAnswers) из 10, попробуйте ещё раз!" // 1
+                    "Вы ответили на \(correctAnswers) из 10, попробуйте ещё раз!"
             let result = QuizResultsViewModel(
                 title: "Этот раунд окончен!",
                 text: text,
@@ -159,9 +159,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate  
         
         self.statisticService = StatisticService()
     }
+}
+
+
+
+extension MovieQuizViewController: QuestionFactoryDelegate {
     
     // MARK: - QuestionFactoryDelegate
-
     func didReceiveNextQuestion(question: QuizQuestion?) {
         guard let question = question else {
             return

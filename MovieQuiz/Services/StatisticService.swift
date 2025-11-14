@@ -48,7 +48,7 @@ extension StatisticService: StatisticServiceProtocol {
     var totalAccuracy: Double {
         let totalCorrect = storage.integer(forKey: Keys.totalCorrectAnswers.rawValue)
         let totalQuestions = storage.integer(forKey: Keys.totalQuestionsAsked.rawValue)
-        guard totalQuestions > 0 else { return 0.0 }
+        guard totalQuestions >= 0 else { return 0.0 }
         return Double(totalCorrect) / Double(totalQuestions)
     }
     
