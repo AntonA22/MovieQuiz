@@ -68,7 +68,7 @@
                                                 </constraints>
                                                 <state key="normal" title="Button"/>
                                                 <buttonConfiguration key="configuration" style="plain" title="Нет">
-                                                    <backgroundConfiguration key="background" cornerRadius="0.0">
+                                                    <backgroundConfiguration key="background" cornerRadius="15">
                                                         <color key="backgroundColor" name="YP White"/>
                                                     </backgroundConfiguration>
                                                     <fontDescription key="titleFontDescription" name="YSDisplay-Medium" family="YS Display" pointSize="20"/>
@@ -89,7 +89,7 @@
                                                 <rect key="frame" x="191" y="0.0" width="171" height="60"/>
                                                 <state key="normal" title="Button"/>
                                                 <buttonConfiguration key="configuration" style="plain" title="Да">
-                                                    <backgroundConfiguration key="background" cornerRadius="0.0">
+                                                    <backgroundConfiguration key="background" cornerRadius="15">
                                                         <color key="backgroundColor" name="YP White"/>
                                                     </backgroundConfiguration>
                                                     <fontDescription key="titleFontDescription" name="YSDisplay-Medium" family="YS Display" pointSize="20"/>
