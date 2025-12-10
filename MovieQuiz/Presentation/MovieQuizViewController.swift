@@ -2,7 +2,7 @@ import UIKit
 
 
 
-final class MovieQuizViewController: UIViewController  {
+final class MovieQuizViewController: UIViewController, MovieQuizViewControllerProtocol  {
     
     // MARK: - IBOutlet
     
@@ -18,15 +18,9 @@ final class MovieQuizViewController: UIViewController  {
 
     // MARK: - Private Properties
     
-    private var correctAnswers = 0 // переменная со счётчиком правильных ответов
-    
-    private var questionFactory: QuestionFactoryProtocol?
-
-    
     private var alertPresenter = AlertPresenter()
-    private var statisticService: StatisticServiceProtocol?
     
-    private let presenter = MovieQuizPresenter()
+    private var presenter: MovieQuizPresenter!
     
     // MARK: - IBAction
     
@@ -40,12 +34,12 @@ final class MovieQuizViewController: UIViewController  {
     
     // MARK: - Private Methods
     
-    private func showLoadingIndicator() {
+    func showLoadingIndicator() {
         activityIndicator.isHidden = false // говорим, что индикатор загрузки не скрыт
         activityIndicator.startAnimating() // включаем анимацию
     }
     
-    private func showNetworkError(message: String) {
+    func showNetworkError(message: String) {
         activityIndicator.isHidden = true
         
         let model = AlertModel(title: "Ошибка",
@@ -53,10 +47,8 @@ final class MovieQuizViewController: UIViewController  {
                                buttonText: "Попробовать еще раз") { [weak self] in
             guard let self = self else { return }
             
-            self.presenter.resetQuestionIndex()
-            self.correctAnswers = 0
+            self.presenter.restartGame()
             
-            self.questionFactory?.requestNextQuestion()
         }
         
         alertPresenter.show(in: self, model: model)
@@ -78,70 +70,35 @@ final class MovieQuizViewController: UIViewController  {
         yesButton.isEnabled = true
     }
     
-    // метод, который меняет цвет рамки
-    // принимает на вход булевое значение и ничего не возвращает
-    func showAnswerResult(isCorrect: Bool) {
-        if isCorrect { // 1
-                correctAnswers += 1
-        }
-        
+    func highlightImageBorder(isCorrectAnswer: Bool) {
+        imageView.layer.masksToBounds = true
         imageView.layer.borderWidth = 8
-        imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.showNextQuestionOrResults()
-        }
+        imageView.layer.borderColor = isCorrectAnswer ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
     }
     
-    // приватный метод, который содержит логику перехода в один из сценариев
-    // метод ничего не принимает и ничего не возвращает
-    private func showNextQuestionOrResults() {
-        if presenter.isLastQuestion() {
-            let text = correctAnswers == presenter.questionsAmount ?
-                    "Поздравляем, вы ответили на 10 из 10!" :
-                    "Вы ответили на \(correctAnswers) из 10, попробуйте ещё раз!"
-            let result = QuizResultsViewModel(
-                title: "Этот раунд окончен!",
-                text: text,
-                buttonText: "Сыграть ещё раз")
-            show(quiz: result)
-        } else { // 2
-            
-            //убираем рамки
-            imageView.layer.borderWidth = 0
-            presenter.switchToNextQuestion()
-            // идём в состояние "Вопрос показан"
-            
-            questionFactory?.requestNextQuestion() 
-        }
+    func hideLoadingIndicator() {
+        activityIndicator.isHidden = true
     }
     
     // приватный метод для показа результатов раунда квиза
     // принимает вью модель QuizResultsViewModel и ничего не возвращает
-    private func show(quiz result: QuizResultsViewModel) {
-        statisticService?.store(correct: correctAnswers, total: presenter.questionsAmount)
-        _ = statisticService?.bestGame
-        guard let statisticService = statisticService else { return }
+    func show(quiz result: QuizResultsViewModel) {
+        let message = presenter.makeResultsMessage()
 
-        let message = """
-        Ваш результат: \(correctAnswers)/\(presenter.questionsAmount)
-        Количество сыгранных квизов: \(statisticService.gamesCount)
-        Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(statisticService.bestGame.date.dateTimeString))
-        Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy*100))%
-        """
-        let model = AlertModel(
+        let alert = UIAlertController(
             title: result.title,
-            message: message,   // текст с количеством правильных ответов
-            buttonText: result.buttonText
-        ) { [weak self] in
-            guard let self = self else { return }
-            // Сброс состояния и перезапуск игры
-            self.presenter.resetQuestionIndex()
-            self.correctAnswers = 0
-            self.questionFactory?.requestNextQuestion()
+            message: message,
+            preferredStyle: .alert)
+            
+        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
+                guard let self = self else { return }
+                
+                self.presenter.restartGame()
         }
 
-        alertPresenter.show(in: self, model: model)
+        alert.addAction(action)
+
+        self.present(alert, animated: true, completion: nil)
     }
     
     // MARK: - Lifecycle
@@ -149,32 +106,16 @@ final class MovieQuizViewController: UIViewController  {
     override func viewDidLoad() {
         super.viewDidLoad()
        
-        presenter.viewController = self
+        presenter = MovieQuizPresenter(viewController: self)
         
         imageView.layer.cornerRadius = 20
-        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
-        statisticService = StatisticService()
 
         showLoadingIndicator()
-        questionFactory?.loadData()
     }
 }
 
 
 
-extension MovieQuizViewController: QuestionFactoryDelegate {
+extension MovieQuizViewController {
     
-    // MARK: - QuestionFactoryDelegate
-    func didReceiveNextQuestion(question: QuizQuestion?) {
-        presenter.didReceiveNextQuestion(question: question)
-    }
-    
-    func didLoadDataFromServer() {
-        activityIndicator.isHidden = true // скрываем индикатор загрузки
-        questionFactory?.requestNextQuestion()
-    }
-
-    func didFailToLoadData(with error: Error) {
-        showNetworkError(message: error.localizedDescription) // возьмём в качестве сообщения описание ошибки
-    }
 }
