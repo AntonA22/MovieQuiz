@@ -34,7 +34,7 @@ class MovieQuizUITests: XCTestCase {
         let firstPoster = app.images["Poster"]
         let firstPosterData = firstPoster.screenshot().pngRepresentation
         
-        app.buttons["YES"].tap()
+        app.buttons["Yes"].tap()
         sleep(3)
         
         let secondPoster = app.images["Poster"]
@@ -66,34 +66,57 @@ class MovieQuizUITests: XCTestCase {
     }
     
     func testGameFinish() {
-        sleep(2)
+        // Ждём появления кнопки "Нет"
+        let noButton = app.buttons["No"]
+        XCTAssertTrue(noButton.waitForExistence(timeout: 5))
+
+        // Проходим 10 вопросов, отвечая "Нет"
         for _ in 1...10 {
-            app.buttons["No"].tap()
-            sleep(2)
+            noButton.tap()
+            sleep(1) // даём интерфейсу обновиться
         }
 
-        let alert = app.alerts["Game results"]
-        
-        XCTAssertTrue(alert.exists)
-        XCTAssertTrue(alert.label == "Этот раунд окончен!")
-        XCTAssertTrue(alert.buttons.firstMatch.label == "Сыграть ещё раз")
+        // Ищем алерт по ЗАГОЛОВКУ, как в приложении
+        let alert = app.alerts["Этот раунд окончен!"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "Алерт с результатами игры не появился")
+
+        // Проверяем заголовок
+        XCTAssertEqual(alert.label, "Этот раунд окончен!")
+
+        // Проверяем кнопку
+        let button = alert.buttons["Сыграть ещё раз"]
+        XCTAssertTrue(button.exists, "Кнопка 'Сыграть ещё раз' не найдена в алерте")
+        XCTAssertEqual(button.label, "Сыграть ещё раз")
     }
 
     func testAlertDismiss() {
-        sleep(2)
+        // ждём, пока появится кнопка "Yes"
+        let yesButton = app.buttons["Yes"]
+        XCTAssertTrue(yesButton.waitForExistence(timeout: 5))
+
+        // 10 раз жмём "Yes", чтобы закончить раунд
         for _ in 1...10 {
-            app.buttons["No"].tap()
-            sleep(2)
+            yesButton.tap()
+            sleep(1) // даём интерфейсу время обновиться
         }
-        
-        let alert = app.alerts["Game results"]
-        alert.buttons.firstMatch.tap()
-        
+
+        // Ищем алерт по заголовку
+        let alert = app.alerts["Этот раунд окончен!"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "Алерт с результатами не появился")
+
+        // Нажимаем на кнопку "Сыграть ещё раз"
+        let replayButton = alert.buttons["Сыграть ещё раз"]
+        XCTAssertTrue(replayButton.exists, "Кнопка 'Сыграть ещё раз' не найдена в алерте")
+        replayButton.tap()
+
+        // Даём времени интерфейсу
         sleep(2)
-        
+
+        // Проверяем счётчик
         let indexLabel = app.staticTexts["Index"]
-        
-        XCTAssertFalse(alert.exists)
-        XCTAssertTrue(indexLabel.label == "1/10")
+        XCTAssertTrue(indexLabel.waitForExistence(timeout: 5))
+
+        XCTAssertFalse(alert.exists, "Алерт не исчез после нажатия на кнопку")
+        XCTAssertEqual(indexLabel.label, "1/10", "После начала нового раунда счётчик должен быть 1/10")
     }
 }
